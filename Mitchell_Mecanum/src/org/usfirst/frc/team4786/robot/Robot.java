@@ -7,11 +7,14 @@
 
 package org.usfirst.frc.team4786.robot;
 
-import com.ctre.phoenix.motorcontrol.can.TalonSRX;
+import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
+import com.kauailabs.navx.frc.AHRS;
 
 import edu.wpi.first.wpilibj.GenericHID.Hand;
+import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.drive.MecanumDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -28,13 +31,17 @@ public class Robot extends TimedRobot {
 	private String m_autoSelected;
 	private SendableChooser<String> m_chooser = new SendableChooser<>();
 
-	TalonSRX leftFront = new TalonSRX(13);
-	TalonSRX leftBack = new TalonSRX(14);
-	TalonSRX rightFront = new TalonSRX(15);
-	TalonSRX rightBack = new TalonSRX(16);
+	public static WPI_TalonSRX frontLeft = new WPI_TalonSRX(13);
+	public static WPI_TalonSRX backLeft = new WPI_TalonSRX(14);
+	public static WPI_TalonSRX frontRight = new WPI_TalonSRX(15);
+	public static WPI_TalonSRX backRight = new WPI_TalonSRX(16);
 	boolean front = true;
+    public static MecanumDrive robotDrive = new MecanumDrive(frontLeft, frontRight, backLeft, backRight);
+    
+    private AHRS navX;
+	
 	//Joystick JoyVal = new Joystick(0);
-	XboxController xbox = new XboxController(2);
+	XboxController xbox = new XboxController(0);
 
 	/**
 	 * This function is run when the robot is first started up and should be
@@ -45,6 +52,8 @@ public class Robot extends TimedRobot {
 		m_chooser.addDefault("Default Auto", kDefaultAuto);
 		m_chooser.addObject("My Auto", kCustomAuto);
 		SmartDashboard.putData("Auto choices", m_chooser);
+		navX = new AHRS(SPI.Port.kMXP);
+		navX.reset();
 	}
 
 	/**
@@ -82,6 +91,10 @@ public class Robot extends TimedRobot {
 		}
 	}
 
+    public void takeJoystickInputs(double xValue, double yValue, double twistValue) {
+    	robotDrive.driveCartesian(yValue, xValue, twistValue, navX.getAngle());
+    }
+	
 	/**
 	 * This function is called periodically during operator control.
 	 */
@@ -90,90 +103,7 @@ public class Robot extends TimedRobot {
 		double yVal = xbox.getY(Hand.kLeft);
 		double xVal = xbox.getX(Hand.kLeft);
 		double turnVal = xbox.getX(Hand.kRight);
-		
-		
-		//gives the rotation value of each of the wheels
-		// LFR = Left Front Right (wheel position on the robot)
-		double LFR = yVal+xVal;
-		double LBR = yVal-xVal;
-		double RFR = yVal-xVal;
-		double RBR = yVal+xVal;
-				
-				
-		//switches front of robot
-		if (front) {
-			LBR = LBR*-1;
-			LFR = LFR*-1;
-		} else {
-			RFR = RFR*-1;
-			RBR = RBR*-1;
-		}
-		
-		//switches value of front
-		if (xbox.getYButtonPressed()) {
-			front = !front;
-		} else {
-		}
-		
-		//speed control
-				if (LFR < 0.5 && LFR > -.5) {
-					LFR = LFR*0.0;
-					RBR = RBR*0.0;
-				} else {
-					LFR = LFR*1.0;
-					RBR = RBR*1.0;
-				}
-				
-				if (LBR < 0.5 && LBR > -.5) {
-					LBR = LBR*0.0;
-					RFR = RFR*0.0;
-				} else {
-					LBR = LBR*1.0;
-					RFR = RFR*1.0;
-				}
-		/*
-		if (LFR >= .5 || RBR >= .5){
-			LFR = (LFR-.5)*2;
-		RBR = (RBR-.5)*2;
-		} else {
-		}
-		
-		if (LFR <= -.5 || RBR <= .5){
-			LFR = (LFR+.5)*2;
-		RBR = (RBR+.5)*2;
-		} else { 
-		}
-		
-		if (LBR >= .5 || RFR >= .5){
-			LBR = (LBR-.5)*2;
-		RFR = (RFR-.5)*2;
-		} else {
-		}
-		
-		if (LBR <= -.5 || RFR <= .5){
-			LBR = (LBR+.5)*2;
-		RFR = (RFR+.5)*2;
-		} else { 
-		}
-		*/
-		
-		if (turnVal > .5) {
-			LFR = LFR+25;
-			LBR = LBR+25;
-			RFR = RFR-25;
-			RBR = RBR-25;
-		} else if (turnVal < -.5) {
-			RFR = RFR+25;
-			RBR = RBR+25;
-			LFR = LFR-25;
-			LBR = LBR-25;
-		} else {
-		}
-		
-		leftFront.set(com.ctre.phoenix.motorcontrol.ControlMode.PercentOutput, LFR);
-		leftBack.set(com.ctre.phoenix.motorcontrol.ControlMode.PercentOutput, LBR);
-		rightFront.set(com.ctre.phoenix.motorcontrol.ControlMode.PercentOutput, RFR);
-		rightBack.set(com.ctre.phoenix.motorcontrol.ControlMode.PercentOutput, RBR);
+		takeJoystickInputs(xVal, yVal, turnVal);
 		
 
 	}
